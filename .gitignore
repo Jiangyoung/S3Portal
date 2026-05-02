@@ -1,0 +1,7 @@
+.pio
+.vscode/
+.env
+server/.env
+include/secrets.h
+localpic/
+.venv/

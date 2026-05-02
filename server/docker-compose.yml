@@ -1,0 +1,9 @@
+services:
+  server:
+    build: .
+    ports:
+      - "10003:10003"
+    env_file: .env
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+    restart: unless-stopped

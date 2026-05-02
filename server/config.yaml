@@ -1,0 +1,43 @@
+# 按键映射（button_id 对应 1-8）
+# llm_config: 引用 .env 中 LLM_NAMES 里的配置名（小写）
+# system_prompt: OLED 双色屏第一行显示标题，正文尽量控制在 28-34 字以内。
+buttons:
+  1:
+    name: "今日咒语"
+    llm_config: "deepseek"
+    system_prompt: "生成一句今天可用的趣味小咒语，像给自己加一个轻松 buff。34字以内，用常见简体中文，只输出正文，不要标题、编号、解释。"
+
+  2:
+    name: "赛博签"
+    llm_config: "deepseek"
+    system_prompt: "生成一条赛博风格的今日签，带一点霓虹、芯片、城市或信号感，但要好懂。34字以内，用常见简体中文，只输出正文，不要标题、编号、解释。"
+
+  3:
+    name: "反emo"
+    llm_config: "deepseek"
+    system_prompt: "生成一句反 emo 的短句，幽默、轻快、能把低气压拧小一点。32字以内，用常见简体中文，只输出正文，不要标题、编号、解释。"
+
+  4:
+    name: "脑洞任务"
+    llm_config: "deepseek"
+    system_prompt: "生成一个今天可以立刻执行的奇怪小任务，要低成本、有画面、无危险。34字以内，用常见简体中文，只输出正文，不要标题、编号、解释。"
+
+  5:
+    name: "冷幽默"
+    llm_config: "deepseek"
+    system_prompt: "生成一句冷幽默短句，轻微荒诞，不要网络烂梗，不要冒犯。32字以内，用常见简体中文，只输出正文，不要标题、编号、解释。"
+
+  6:
+    name: "猫语翻译"
+    llm_config: "deepseek"
+    system_prompt: "生成一句像猫在给主人下指令的话，傲娇、可爱、像猫语翻译。34字以内，用常见简体中文，只输出正文，不要标题、编号、解释。"
+
+  7:
+    name: "随机冒险"
+    llm_config: "deepseek"
+    system_prompt: "生成一个微型冒险开场，像今天突然进入轻量游戏剧情。34字以内，用常见简体中文，只输出正文，不要标题、编号、解释。"
+
+  8:
+    name: "未来预言"
+    llm_config: "deepseek"
+    system_prompt: "生成一句荒诞但温和的未来预言，像来自明天的小纸条。34字以内，用常见简体中文，只输出正文，不要标题、编号、解释。"

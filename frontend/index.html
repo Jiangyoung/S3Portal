@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ESP32-S3 每日一句接线演示</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+html, body { min-height: 100%; }
+body {
+  margin: 0;
+  background: #eef2f6;
+  color: #172033;
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+}
+button, input { font: inherit; }
+.topbar {
+  min-height: 58px;
+  padding: 10px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: #f8fafc;
+  background: #172033;
+  border-bottom: 3px solid #16a34a;
+}
+.brand {
+  font-size: 16px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+.subtle {
+  color: #aeb8c8;
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.topbar-spacer { flex: 1; }
+.server-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: min(100%, 520px);
+}
+.server-control label {
+  color: #aeb8c8;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+#srv-input {
+  width: min(350px, 42vw);
+  height: 34px;
+  padding: 0 10px;
+  color: #f8fafc;
+  background: #0f172a;
+  border: 1px solid #41516a;
+  border-radius: 6px;
+  outline: none;
+}
+#srv-input:focus { border-color: #38bdf8; }
+.top-btn {
+  height: 34px;
+  padding: 0 14px;
+  color: #f8fafc;
+  background: #263244;
+  border: 1px solid #64748b;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.top-btn:hover { border-color: #38bdf8; }
+.conn {
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  color: #cbd5e1;
+  border: 1px solid #41516a;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.conn-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: #94a3b8;
+}
+.conn-dot.ok { background: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,.18); }
+.conn-dot.err { background: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,.18); }
+.layout {
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 16px;
+}
+.diagram-card,
+.side {
+  background: #ffffff;
+  border: 1px solid #d5dde8;
+  border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(15,23,42,.08);
+}
+.diagram-head {
+  min-height: 54px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid #e2e8f0;
+}
+.title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 850;
+}
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 700;
+}
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.swatch {
+  width: 26px;
+  height: 4px;
+  border-radius: 999px;
+}
+.diagram-scroll {
+  overflow: auto;
+  padding: 12px;
+}
+#diagram {
+  display: block;
+  width: 100%;
+  min-width: 1120px;
+  height: auto;
+}
+.side {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.panel {
+  border: 1px solid #d5dde8;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #ffffff;
+}
+.panel-title {
+  margin: 0;
+  padding: 9px 10px;
+  color: #475569;
+  background: #f1f5f9;
+  border-bottom: 1px solid #d5dde8;
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: .08em;
+}
+.state-body {
+  padding: 10px;
+  background: #f8fafc;
+}
+.state-value {
+  font-size: 17px;
+  font-weight: 850;
+}
+.state-detail {
+  margin-top: 6px;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.55;
+}
+.style-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 10px;
+}
+.style-btn {
+  min-height: 58px;
+  padding: 8px;
+  text-align: left;
+  color: #172033;
+  background: #ffffff;
+  border: 1px solid #d5dde8;
+  border-radius: 7px;
+  cursor: pointer;
+}
+.style-btn:hover { border-color: #94a3b8; }
+.style-btn.active {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+}
+.style-btn.busy {
+  border-color: #16a34a;
+  box-shadow: 0 0 0 3px rgba(22,163,74,.12);
+}
+.style-k {
+  display: block;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 850;
+}
+.style-name {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  font-weight: 850;
+}
+.style-desc {
+  display: block;
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.25;
+}
+.history {
+  max-height: 230px;
+  padding: 10px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.history-empty {
+  color: #94a3b8;
+  font-size: 12px;
+}
+.history-item {
+  padding: 8px 9px;
+  border: 1px solid #d5dde8;
+  border-radius: 7px;
+  background: #ffffff;
+}
+.history-meta {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 850;
+  margin-bottom: 4px;
+}
+.history-text {
+  color: #172033;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.wire-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.wire-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: top;
+}
+.wire-table tr:last-child td { border-bottom: 0; }
+.wire-table td:first-child {
+  width: 34%;
+  color: #475569;
+  font-weight: 850;
+}
+svg text {
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+}
+.module-title {
+  font-size: 16px;
+  font-weight: 900;
+  fill: #172033;
+}
+.module-sub {
+  font-size: 11px;
+  font-weight: 700;
+  fill: #64748b;
+}
+.board-title {
+  font-size: 18px;
+  font-weight: 900;
+  fill: #f8fafc;
+}
+.board-sub {
+  font-size: 12px;
+  font-weight: 700;
+  fill: #cbd5e1;
+}
+.pin-label {
+  font-size: 10.5px;
+  font-weight: 800;
+  fill: #172033;
+}
+.esp-label {
+  fill: #f8fafc;
+}
+.esp-label.unused {
+  fill: #cbd5e1;
+}
+.pin-dot {
+  stroke: #ffffff;
+  stroke-width: 1.5;
+}
+.wire {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: .96;
+  transition: stroke-width .15s, opacity .15s, filter .15s;
+}
+.wire.faint { opacity: .42; }
+.wire.active {
+  stroke-width: 5;
+  opacity: 1;
+  filter: drop-shadow(0 0 5px rgba(37,99,235,.45));
+}
+.wire-label-bg {
+  fill: #ffffff;
+  stroke: #d5dde8;
+}
+.wire-label {
+  font-size: 10.5px;
+  font-weight: 900;
+}
+.svg-key {
+  cursor: pointer;
+}
+.svg-key rect {
+  transition: transform .08s, stroke .15s, filter .15s;
+}
+.svg-key:hover rect {
+  stroke: #0f172a;
+  filter: drop-shadow(0 4px 7px rgba(15,23,42,.18));
+}
+.svg-key.active rect {
+  stroke: #2563eb;
+  stroke-width: 3;
+}
+.svg-key.busy rect {
+  stroke: #16a34a;
+  stroke-width: 3;
+}
+.svg-key.disabled {
+  pointer-events: none;
+  opacity: .62;
+}
+.oled-text {
+  font-family: Consolas, "Microsoft YaHei", monospace;
+  font-size: 15px;
+  font-weight: 800;
+  fill: #39ff88;
+}
+.oled-meta {
+  font-family: Consolas, monospace;
+  font-size: 11px;
+  font-weight: 800;
+  fill: #16a34a;
+}
+@media (max-width: 980px) {
+  .topbar { flex-wrap: wrap; align-items: stretch; }
+  .topbar-spacer { display: none; }
+  .server-control { width: 100%; min-width: 0; }
+  #srv-input { flex: 1; width: auto; }
+  .layout { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">ESP32-S3 每日一句</div>
+  <div class="subtle">K1-K8 对应 8 种文案风格</div>
+  <div class="topbar-spacer"></div>
+  <div class="server-control">
+    <label for="srv-input">SERVER</label>
+    <input id="srv-input" value="http://localhost:10003" spellcheck="false">
+    <button id="test-btn" class="top-btn" type="button">TEST</button>
+  </div>
+  <div class="conn">
+    <span id="conn-dot" class="conn-dot"></span>
+    <span id="conn-text">未检测</span>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="diagram-card">
+    <div class="diagram-head">
+      <h1 class="title">接线演示图</h1>
+      <div class="legend">
+        <span><i class="swatch" style="background:#e11d48"></i>3.3V</span>
+        <span><i class="swatch" style="background:#475569"></i>GND</span>
+        <span><i class="swatch" style="background:#2563eb"></i>OLED I2C</span>
+        <span><i class="swatch" style="background:#ea580c"></i>按键 GPIO</span>
+      </div>
+    </div>
+    <div class="diagram-scroll">
+      <svg id="diagram" viewBox="0 0 1180 720" role="img" aria-label="ESP32-S3 OLED 和八位按键模块接线演示">
+        <defs>
+          <pattern id="oled-grid" width="8" height="8" patternUnits="userSpaceOnUse">
+            <path d="M8 0H0v8" fill="none" stroke="#083016" stroke-width="1"/>
+          </pattern>
+          <marker id="arrow-power" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+            <path d="M0,0 L8,4 L0,8 Z" fill="#e11d48"/>
+          </marker>
+          <marker id="arrow-ground" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+            <path d="M0,0 L8,4 L0,8 Z" fill="#475569"/>
+          </marker>
+          <marker id="arrow-i2c" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+            <path d="M0,0 L8,4 L0,8 Z" fill="#2563eb"/>
+          </marker>
+          <marker id="arrow-key" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+            <path d="M0,0 L8,4 L0,8 Z" fill="#ea580c"/>
+          </marker>
+        </defs>
+
+        <rect x="10" y="10" width="1160" height="700" rx="12" fill="#f8fafc" stroke="#d5dde8"/>
+        <g id="wire-layer"></g>
+
+        <g id="oled-module">
+          <rect x="54" y="58" width="330" height="204" rx="10" fill="#e7f7ff" stroke="#0284c7" stroke-width="2"/>
+          <text x="219" y="86" text-anchor="middle" class="module-title">SSD1306 OLED 128x64</text>
+          <text x="219" y="106" text-anchor="middle" class="module-sub">I2C: VCC / GND / SCL / SDA</text>
+          <rect x="88" y="122" width="262" height="92" rx="5" fill="#031008" stroke="#14532d" stroke-width="2"/>
+          <rect x="91" y="125" width="256" height="86" rx="4" fill="url(#oled-grid)"/>
+          <text x="102" y="144" class="oled-meta">ESP32-S3</text>
+          <text id="oled-mode" x="337" y="144" text-anchor="end" class="oled-meta">READY</text>
+          <line x1="102" y1="151" x2="337" y2="151" stroke="#14532d"/>
+          <g id="oled-lines"></g>
+          <g id="oled-pins"></g>
+        </g>
+
+        <g id="button-module">
+          <rect x="54" y="342" width="350" height="306" rx="10" fill="#fff7ed" stroke="#f97316" stroke-width="2"/>
+          <text x="229" y="370" text-anchor="middle" class="module-title">八位独立按键模块</text>
+          <text x="229" y="390" text-anchor="middle" class="module-sub">K1-K8 active-LOW，VCC 接 3.3V，GND 共地</text>
+          <circle cx="364" cy="366" r="8" fill="#22c55e" stroke="#15803d"/>
+          <text x="364" y="390" text-anchor="middle" font-size="10" font-weight="850" fill="#15803d">PWR</text>
+          <g id="key-layer"></g>
+          <g id="button-pins"></g>
+        </g>
+
+        <g id="esp-board">
+          <rect x="520" y="58" width="260" height="590" rx="16" fill="#1f2937" stroke="#0f172a" stroke-width="3"/>
+          <rect x="562" y="88" width="176" height="118" rx="8" fill="#334155" stroke="#64748b"/>
+          <text x="650" y="120" text-anchor="middle" class="board-title">ESP32-S3-WROOM-1</text>
+          <text x="650" y="144" text-anchor="middle" class="board-sub">N16R8 · USB 朝下</text>
+          <path d="M596 176 Q650 202 704 176" fill="none" stroke="#94a3b8" stroke-width="2"/>
+          <rect x="566" y="594" width="72" height="26" rx="5" fill="#475569" stroke="#94a3b8"/>
+          <rect x="662" y="594" width="72" height="26" rx="5" fill="#475569" stroke="#94a3b8"/>
+          <text x="602" y="611" text-anchor="middle" font-size="11" font-weight="850" fill="#e2e8f0">USB OTG</text>
+          <text x="698" y="611" text-anchor="middle" font-size="11" font-weight="850" fill="#e2e8f0">USB UART</text>
+          <g id="esp-pins"></g>
+        </g>
+
+        <g id="route-labels">
+          <rect x="424" y="38" width="78" height="24" rx="6" fill="#ffffff" stroke="#d5dde8"/>
+          <text x="463" y="55" text-anchor="middle" font-size="11" font-weight="900" fill="#475569">OLED 通道</text>
+          <rect x="424" y="316" width="78" height="24" rx="6" fill="#ffffff" stroke="#d5dde8"/>
+          <text x="463" y="333" text-anchor="middle" font-size="11" font-weight="900" fill="#475569">按键通道</text>
+        </g>
+      </svg>
+    </div>
+  </section>
+
+  <aside class="side">
+    <section class="panel">
+      <h2 class="panel-title">当前状态</h2>
+      <div class="state-body">
+        <div id="state-value" class="state-value">IDLE</div>
+        <div id="state-detail" class="state-detail">等待 K1-K8 输入。</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2 class="panel-title">每日一句风格</h2>
+      <div id="style-list" class="style-list"></div>
+    </section>
+
+    <section class="panel">
+      <h2 class="panel-title">接线表</h2>
+      <table class="wire-table">
+        <tr><td>OLED</td><td>VCC→L1 3.3V，GND→R1，SCL→L20 GPIO14，SDA→L19 GPIO13</td></tr>
+        <tr><td>按键电源</td><td>VCC→L2 3.3V，GND→L22</td></tr>
+        <tr><td>K1-K8</td><td>L4 GPIO4，L5 GPIO5，L6 GPIO6，L7 GPIO7，L8 GPIO15，L9 GPIO16，L10 GPIO17，L11 GPIO18</td></tr>
+      </table>
+    </section>
+
+    <section class="panel">
+      <h2 class="panel-title">响应记录</h2>
+      <div id="history" class="history">
+        <div id="history-empty" class="history-empty">还没有响应。</div>
+      </div>
+    </section>
+  </aside>
+</main>
+
+<script>
+const COLORS = {
+  power: '#e11d48',
+  ground: '#475569',
+  i2c: '#2563eb',
+  key: '#ea580c',
+  unused: '#94a3b8',
+};
+
+const STYLES = [
+  { id: 1, name: '今日咒语', desc: '给自己加个 buff' },
+  { id: 2, name: '赛博签', desc: '霓虹味今日签' },
+  { id: 3, name: '反emo', desc: '把低气压拧小' },
+  { id: 4, name: '脑洞任务', desc: '立刻可做的小怪事' },
+  { id: 5, name: '冷幽默', desc: '轻微荒诞短句' },
+  { id: 6, name: '猫语翻译', desc: '猫主子的指令' },
+  { id: 7, name: '随机冒险', desc: '微型剧情开场' },
+  { id: 8, name: '未来预言', desc: '来自明天的小纸条' },
+];
+
+const LOADING_TEXTS = [
+  '正在给今天施法',
+  '正在抽取赛博签',
+  '正在驱散低气压',
+  '正在加载脑洞任务',
+  '正在冷却幽默',
+  '正在翻译猫语',
+  '正在开启小冒险',
+  '正在读取明天',
+];
+
+const LEFT_PINS = [
+  ['L1', '3.3V'], ['L2', '3.3V'], ['L3', 'RST'], ['L4', 'GPIO4'], ['L5', 'GPIO5'],
+  ['L6', 'GPIO6'], ['L7', 'GPIO7'], ['L8', 'GPIO15'], ['L9', 'GPIO16'],
+  ['L10', 'GPIO17'], ['L11', 'GPIO18'], ['L12', 'GPIO8'], ['L13', 'GPIO3'],
+  ['L14', 'GPIO46'], ['L15', 'GPIO9'], ['L16', 'GPIO10'], ['L17', 'GPIO11'],
+  ['L18', 'GPIO12'], ['L19', 'GPIO13'], ['L20', 'GPIO14'], ['L21', '5V'], ['L22', 'GND'],
+];
+
+const RIGHT_PINS = [
+  ['R1', 'GND'], ['R2', 'TX'], ['R3', 'RX'], ['R4', 'GPIO1'], ['R5', 'GPIO2'],
+  ['R6', 'GPIO42'], ['R7', 'GPIO41'], ['R8', 'GPIO40'], ['R9', 'GPIO39'],
+  ['R10', 'GPIO38'], ['R11', 'GPIO37'], ['R12', 'GPIO36'], ['R13', 'GPIO35'],
+  ['R14', 'GPIO0'], ['R15', 'GPIO45'], ['R16', 'GPIO48'], ['R17', 'GPIO47'],
+  ['R18', 'GPIO21'], ['R19', 'GPIO20'], ['R20', 'GPIO19'], ['R21', 'GND'], ['R22', 'GND'],
+];
+
+const PIN_ROLES = {
+  L1: 'power', L2: 'power', L4: 'key', L5: 'key', L6: 'key', L7: 'key',
+  L8: 'key', L9: 'key', L10: 'key', L11: 'key', L19: 'i2c', L20: 'i2c',
+  L22: 'ground', R1: 'ground',
+};
+
+const KEY_MAP = [
+  { id: 1, esp: 'L4', btn: 'btn-k1', label: 'K1 GPIO4' },
+  { id: 2, esp: 'L5', btn: 'btn-k2', label: 'K2 GPIO5' },
+  { id: 3, esp: 'L6', btn: 'btn-k3', label: 'K3 GPIO6' },
+  { id: 4, esp: 'L7', btn: 'btn-k4', label: 'K4 GPIO7' },
+  { id: 5, esp: 'L8', btn: 'btn-k5', label: 'K5 GPIO15' },
+  { id: 6, esp: 'L9', btn: 'btn-k6', label: 'K6 GPIO16' },
+  { id: 7, esp: 'L10', btn: 'btn-k7', label: 'K7 GPIO17' },
+  { id: 8, esp: 'L11', btn: 'btn-k8', label: 'K8 GPIO18' },
+];
+
+const serverInput = document.getElementById('srv-input');
+const testBtn = document.getElementById('test-btn');
+const connDot = document.getElementById('conn-dot');
+const connText = document.getElementById('conn-text');
+const stateValue = document.getElementById('state-value');
+const stateDetail = document.getElementById('state-detail');
+const styleList = document.getElementById('style-list');
+const history = document.getElementById('history');
+const historyEmpty = document.getElementById('history-empty');
+const oledMode = document.getElementById('oled-mode');
+const oledLines = document.getElementById('oled-lines');
+
+const espPins = {};
+const modulePins = {};
+const svgKeys = {};
+const sideButtons = {};
+let busy = false;
+let activeId = 0;
+let renderToken = 0;
+let idleTimer = 0;
+
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+const serverUrl = () => serverInput.value.trim().replace(/\/$/, '');
+
+function svgEl(name, attrs = {}) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', name);
+  Object.entries(attrs).forEach(([key, value]) => el.setAttribute(key, value));
+  return el;
+}
+
+function roleColor(role) {
+  return COLORS[role] || COLORS.unused;
+}
+
+function setState(value, detail) {
+  stateValue.textContent = value;
+  stateDetail.textContent = detail;
+}
+
+function buildEspPins() {
+  const group = document.getElementById('esp-pins');
+  const y0 = 92;
+  const pitch = 24;
+
+  LEFT_PINS.forEach(([id, label], index) => {
+    const y = y0 + index * pitch;
+    const role = PIN_ROLES[id] || 'unused';
+    espPins[id] = { x: 520, y };
+    group.appendChild(svgEl('circle', { cx: 520, cy: y, r: 5, fill: roleColor(role), class: 'pin-dot' }));
+    const text = svgEl('text', {
+      x: 510, y: y + 4, 'text-anchor': 'end',
+      class: `pin-label esp-label ${role === 'unused' ? 'unused' : ''}`,
+    });
+    text.textContent = `${id} ${label}`;
+    group.appendChild(text);
+  });
+
+  RIGHT_PINS.forEach(([id, label], index) => {
+    const y = y0 + index * pitch;
+    const role = PIN_ROLES[id] || 'unused';
+    espPins[id] = { x: 780, y };
+    group.appendChild(svgEl('circle', { cx: 780, cy: y, r: 5, fill: roleColor(role), class: 'pin-dot' }));
+    const text = svgEl('text', {
+      x: 790, y: y + 4,
+      class: `pin-label esp-label ${role === 'unused' ? 'unused' : ''}`,
+    });
+    text.textContent = `${id} ${label}`;
+    group.appendChild(text);
+  });
+}
+
+function buildOledPins() {
+  const group = document.getElementById('oled-pins');
+  const pins = [
+    ['oled-vcc', 'VCC', 'power', 112],
+    ['oled-gnd', 'GND', 'ground', 178],
+    ['oled-scl', 'SCL', 'i2c', 244],
+    ['oled-sda', 'SDA', 'i2c', 310],
+  ];
+  pins.forEach(([key, label, role, x]) => {
+    modulePins[key] = { x, y: 242 };
+    group.appendChild(svgEl('circle', { cx: x, cy: 242, r: 5, fill: roleColor(role), class: 'pin-dot' }));
+    const text = svgEl('text', { x, y: 258, 'text-anchor': 'middle', class: 'pin-label' });
+    text.textContent = label;
+    group.appendChild(text);
+  });
+}
+
+function buildButtonModule() {
+  const keyLayer = document.getElementById('key-layer');
+  const fills = ['#ef4444', '#f59e0b', '#3b82f6', '#22c55e', '#fbbf24', '#334155', '#f8fafc', '#64748b'];
+
+  STYLES.forEach((style, index) => {
+    const col = index % 4;
+    const row = Math.floor(index / 4);
+    const x = 82 + col * 72;
+    const y = 414 + row * 64;
+    const textColor = style.id === 6 || style.id === 8 ? '#ffffff' : '#111827';
+    const subColor = style.id === 6 || style.id === 8 ? '#e2e8f0' : '#374151';
+    const group = svgEl('g', { class: 'svg-key', 'data-id': style.id, tabindex: '0', role: 'button', 'aria-label': `K${style.id} ${style.name}` });
+    group.appendChild(svgEl('rect', { x, y, width: 58, height: 46, rx: 8, fill: fills[index], stroke: '#7c2d12', 'stroke-width': 2 }));
+    const k = svgEl('text', { x: x + 29, y: y + 21, 'text-anchor': 'middle', 'font-size': 15, 'font-weight': 900, fill: textColor });
+    k.textContent = `K${style.id}`;
+    const name = svgEl('text', { x: x + 29, y: y + 38, 'text-anchor': 'middle', 'font-size': 9, 'font-weight': 900, fill: subColor });
+    name.textContent = style.name;
+    group.append(k, name);
+    group.addEventListener('click', () => trigger(style.id));
+    group.addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        trigger(style.id);
+      }
+    });
+    keyLayer.appendChild(group);
+    svgKeys[style.id] = group;
+  });
+
+  const pinGroup = document.getElementById('button-pins');
+  const pins = [
+    ['btn-vcc', 'VCC', 'power'], ['btn-gnd', 'GND', 'ground'],
+    ['btn-k1', 'K1', 'key'], ['btn-k2', 'K2', 'key'], ['btn-k3', 'K3', 'key'], ['btn-k4', 'K4', 'key'],
+    ['btn-k5', 'K5', 'key'], ['btn-k6', 'K6', 'key'], ['btn-k7', 'K7', 'key'], ['btn-k8', 'K8', 'key'],
+  ];
+  pins.forEach(([key, label, role], index) => {
+    const y = 402 + index * 23;
+    modulePins[key] = { x: 404, y };
+    pinGroup.appendChild(svgEl('circle', { cx: 404, cy: y, r: 5, fill: roleColor(role), class: 'pin-dot' }));
+    const text = svgEl('text', { x: 392, y: y + 4, 'text-anchor': 'end', class: 'pin-label' });
+    text.textContent = label;
+    pinGroup.appendChild(text);
+  });
+}
+
+function drawLabel(layer, x, y, text, color) {
+  layer.appendChild(svgEl('rect', { x: x - 39, y: y - 12, width: 78, height: 18, rx: 5, class: 'wire-label-bg' }));
+  const node = svgEl('text', { x, y: y + 2, 'text-anchor': 'middle', class: 'wire-label', fill: color });
+  node.textContent = text;
+  layer.appendChild(node);
+}
+
+function drawWire({ id, from, to, role, via, label, labelAt }) {
+  const layer = document.getElementById('wire-layer');
+  const start = espPins[from] || modulePins[from];
+  const end = espPins[to] || modulePins[to];
+  const color = roleColor(role);
+  const points = [start, ...via, end].map(p => `${p.x},${p.y}`).join(' ');
+  const line = svgEl('polyline', {
+    id,
+    points,
+    class: 'wire',
+    stroke: color,
+    'stroke-width': role === 'key' ? 2.4 : 3,
+    'marker-end': `url(#arrow-${role})`,
+  });
+  layer.appendChild(line);
+  if (label) drawLabel(layer, labelAt.x, labelAt.y, label, color);
+}
+
+function buildWires() {
+  drawWire({
+    id: 'wire-oled-vcc', from: 'L1', to: 'oled-vcc', role: 'power', label: 'VCC L1',
+    via: [{ x: 462, y: 92 }, { x: 462, y: 44 }, { x: 112, y: 44 }],
+    labelAt: { x: 292, y: 52 },
+  });
+  drawWire({
+    id: 'wire-oled-gnd', from: 'R1', to: 'oled-gnd', role: 'ground', label: 'GND R1',
+    via: [{ x: 832, y: 92 }, { x: 832, y: 32 }, { x: 178, y: 32 }],
+    labelAt: { x: 386, y: 40 },
+  });
+  drawWire({
+    id: 'wire-oled-scl', from: 'L20', to: 'oled-scl', role: 'i2c', label: 'SCL GPIO14',
+    via: [{ x: 442, y: 548 }, { x: 442, y: 292 }, { x: 244, y: 292 }],
+    labelAt: { x: 430, y: 292 },
+  });
+  drawWire({
+    id: 'wire-oled-sda', from: 'L19', to: 'oled-sda', role: 'i2c', label: 'SDA GPIO13',
+    via: [{ x: 426, y: 524 }, { x: 426, y: 278 }, { x: 310, y: 278 }],
+    labelAt: { x: 414, y: 278 },
+  });
+  drawWire({
+    id: 'wire-btn-vcc', from: 'L2', to: 'btn-vcc', role: 'power', label: 'VCC L2',
+    via: [{ x: 482, y: 116 }, { x: 482, y: 402 }],
+    labelAt: { x: 468, y: 384 },
+  });
+  drawWire({
+    id: 'wire-btn-gnd', from: 'L22', to: 'btn-gnd', role: 'ground', label: 'GND L22',
+    via: [{ x: 474, y: 596 }, { x: 474, y: 425 }],
+    labelAt: { x: 462, y: 440 },
+  });
+
+  KEY_MAP.forEach((item, index) => {
+    const start = espPins[item.esp];
+    const end = modulePins[item.btn];
+    const laneX = 492 - index * 8;
+    drawWire({
+      id: `wire-k${item.id}`,
+      from: item.esp,
+      to: item.btn,
+      role: 'key',
+      label: item.label,
+      via: [{ x: laneX, y: start.y }, { x: laneX, y: end.y }],
+      labelAt: { x: 456, y: start.y + 7 },
+    });
+  });
+}
+
+function buildStyleButtons() {
+  STYLES.forEach(style => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'style-btn';
+    btn.dataset.id = style.id;
+    btn.innerHTML = `
+      <span class="style-k">K${style.id}</span>
+      <span class="style-name">${style.name}</span>
+      <span class="style-desc">${style.desc}</span>`;
+    btn.addEventListener('click', () => trigger(style.id));
+    styleList.appendChild(btn);
+    sideButtons[style.id] = btn;
+  });
+}
+
+function setActive(id, busyState = false) {
+  activeId = id;
+  STYLES.forEach(style => {
+    const active = style.id === id;
+    svgKeys[style.id]?.classList.toggle('active', active);
+    svgKeys[style.id]?.classList.toggle('busy', active && busyState);
+    sideButtons[style.id]?.classList.toggle('active', active);
+    sideButtons[style.id]?.classList.toggle('busy', active && busyState);
+    document.getElementById(`wire-k${style.id}`)?.classList.toggle('active', active);
+  });
+}
+
+function disableKeys(disabled) {
+  STYLES.forEach(style => {
+    svgKeys[style.id]?.classList.toggle('disabled', disabled);
+    sideButtons[style.id].disabled = disabled;
+  });
+}
+
+function wrapText(text, maxChars = 15, maxLines = 4) {
+  const cleaned = String(text).replace(/\s+/g, ' ').trim();
+  if (!cleaned) return [];
+  const lines = [];
+  let line = '';
+  for (const ch of cleaned) {
+    const width = /[\x00-\x7F]/.test(ch) ? .55 : 1;
+    const lineWidth = [...line].reduce((sum, c) => sum + (/[\x00-\x7F]/.test(c) ? .55 : 1), 0);
+    if (line && lineWidth + width > maxChars) {
+      lines.push(line);
+      line = ch;
+      if (lines.length >= maxLines) break;
+    } else {
+      line += ch;
+    }
+  }
+  if (line && lines.length < maxLines) lines.push(line);
+  if (lines.length === maxLines && cleaned.length > lines.join('').length) {
+    lines[maxLines - 1] = lines[maxLines - 1].slice(0, Math.max(0, lines[maxLines - 1].length - 1)) + '…';
+  }
+  return lines;
+}
+
+function setOled(text, mode = 'READY') {
+  oledMode.textContent = mode;
+  oledLines.replaceChildren();
+  const lines = wrapText(text || '等待 K1-K8');
+  lines.forEach((line, index) => {
+    const node = svgEl('text', { x: 102, y: 174 + index * 18, class: 'oled-text' });
+    node.textContent = line;
+    oledLines.appendChild(node);
+  });
+}
+
+async function animateOled(text, id) {
+  const token = ++renderToken;
+  clearTimeout(idleTimer);
+  let shown = '';
+  for (const ch of String(text)) {
+    if (token !== renderToken) return;
+    shown += ch;
+    setOled(shown, `K${id} OK`);
+    await sleep(16);
+  }
+  idleTimer = setTimeout(() => {
+    if (token === renderToken) {
+      setOled('等待 K1-K8', 'READY');
+      setState('IDLE', '等待 K1-K8 输入。');
+      setActive(0);
+    }
+  }, 10000);
+}
+
+function addHistory(id, text) {
+  historyEmpty.style.display = 'none';
+  const style = STYLES.find(item => item.id === id);
+  const item = document.createElement('div');
+  item.className = 'history-item';
+  const meta = document.createElement('div');
+  meta.className = 'history-meta';
+  meta.textContent = `K${id} · ${style?.name || ''} · ${new Date().toLocaleTimeString('zh-CN', { hour12: false })}`;
+  const body = document.createElement('div');
+  body.className = 'history-text';
+  body.textContent = text;
+  item.append(meta, body);
+  history.prepend(item);
+}
+
+async function trigger(id) {
+  if (busy) return;
+  busy = true;
+  disableKeys(true);
+  setActive(id, true);
+  const style = STYLES[id - 1];
+  const loadingText = LOADING_TEXTS[id - 1] || '正在生成内容';
+  setState('REQUESTING', `K${id} ${style.name}：${loadingText}。`);
+  setOled(loadingText, `K${id} ${style.name}`);
+
+  try {
+    const response = await fetch(`${serverUrl()}/api/trigger`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ button_id: id }),
+      signal: AbortSignal.timeout(20000),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.detail || `HTTP ${response.status}`);
+    const text = data.text || '(空响应)';
+    addHistory(id, text);
+    setActive(id, false);
+    setState('DISPLAY', `K${id} 已返回，按钮已解锁。`);
+    animateOled(text, id);
+  } catch (error) {
+    const timeout = error.name === 'TimeoutError' || error.name === 'AbortError';
+    const msg = timeout ? '请求超时' : '连接失败';
+    setState('ERROR', `${msg}：${error.message || '无法访问服务端'}`);
+    setOled(msg, 'ERROR');
+    connDot.className = 'conn-dot err';
+    connText.textContent = 'DISCONNECTED';
+  } finally {
+    busy = false;
+    disableKeys(false);
+    if (activeId === id) setActive(id, false);
+  }
+}
+
+async function checkHealth() {
+  connDot.className = 'conn-dot';
+  connText.textContent = 'CHECKING';
+  try {
+    const response = await fetch(`${serverUrl()}/health`, { signal: AbortSignal.timeout(4000) });
+    const data = await response.json();
+    if (!response.ok || data.status !== 'ok') throw new Error('bad health response');
+    connDot.className = 'conn-dot ok';
+    connText.textContent = 'CONNECTED';
+    if (data.buttons && typeof data.buttons === 'object') {
+      Object.entries(data.buttons).forEach(([id, cfg]) => {
+        const button = sideButtons[id];
+        if (button && cfg.name) button.querySelector('.style-name').textContent = cfg.name;
+      });
+    }
+  } catch {
+    connDot.className = 'conn-dot err';
+    connText.textContent = 'DISCONNECTED';
+  }
+}
+
+function init() {
+  serverInput.value = localStorage.getItem('esp32_server') || 'http://localhost:10003';
+  buildEspPins();
+  buildOledPins();
+  buildButtonModule();
+  buildWires();
+  buildStyleButtons();
+  setOled('等待 K1-K8', 'READY');
+  serverInput.addEventListener('change', () => {
+    localStorage.setItem('esp32_server', serverInput.value.trim());
+    checkHealth();
+  });
+  testBtn.addEventListener('click', checkHealth);
+  checkHealth();
+}
+
+init();
+</script>
+</body>
+</html>
