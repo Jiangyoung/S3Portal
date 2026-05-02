@@ -183,3 +183,94 @@ GND
 
 > K9（POWER 按键）在板上独立，通过板子连接至 VCC/GND，不单独引出信号脚。
 
+---
+
+## 6. 本项目实测接线与调试注意点
+
+### ESP32-S3 引脚方向
+
+本文按 USB 接口朝下、左右各 22 针来描述开发板。接线时优先按开发板丝印确认，不要只按图片方向猜。
+
+### OLED SSD1306 I2C 屏幕
+
+本项目实测 OLED 地址为 `0x3C`，接线如下：
+
+| OLED | ESP32-S3 |
+|------|----------|
+| VCC | 3.3V |
+| GND | GND |
+| SCL | GPIO14 / L20 |
+| SDA | GPIO13 / L19 |
+
+注意点：
+
+- OLED 模块排针顺序不统一，常见有 `VCC-GND-SCL-SDA` 和 `GND-VCC-SCL-SDA`，必须以实物丝印为准。
+- 串口日志能看到 `I2C device found at 0x3C`，只能说明 I2C 扫描到了设备，不代表显示驱动一定正确。
+- 本项目遇到过 U8g2 硬件 I2C 卡在 `u8g2.begin()` 的问题，当前固件使用 U8g2 软件 I2C，接线仍然是 `SCL=GPIO14`、`SDA=GPIO13`。
+- 这块 OLED 是双色屏，第一行物理区域为黄色，第二行开始为蓝色；固件按这个特性把标题放第一行，正文从第二行开始显示。
+
+### 八位按键模块
+
+本项目使用 K1-K8 八个独立按键信号，接线如下：
+
+| 按键模块 | ESP32-S3 |
+|----------|----------|
+| VCC | 3.3V |
+| GND | GND |
+| K1 | GPIO4 / L4 |
+| K2 | GPIO5 / L5 |
+| K3 | GPIO6 / L6 |
+| K4 | GPIO7 / L7 |
+| K5 | GPIO15 / L8 |
+| K6 | GPIO16 / L9 |
+| K7 | GPIO17 / L10 |
+| K8 | GPIO18 / L11 |
+
+注意点：
+
+- 按键为 active-LOW：未按下应为 `HIGH/1`，按下应为 `LOW/0`。
+- 按键模块上电灯亮，只能说明 VCC/GND 有电，不能证明 K1-K8 信号线接对。
+- 判断按键是否接对，要看 PlatformIO Serial Monitor 里的 GPIO 电平日志。
+- 正常未按下时应看到 K1-K8 初始电平均为 `1`。
+- 按下 K1 时应看到类似 `K1 GPIO4 raw changed: LOW/PRESSED`。
+- 松开 K1 时应看到类似 `K1 GPIO4 raw changed: HIGH/RELEASED`。
+- 如果按下没有 `raw changed`，优先检查模块排针顺序、K 线是否接到对应 GPIO、GND 是否共地。
+
+### 串口调试关键日志
+
+打开 PlatformIO Serial Monitor，波特率 `115200`。正常硬件初始化应出现：
+
+```text
+I2C scan start (SDA=13, SCL=14)
+I2C device found at 0x3C
+Button pin levels (idle should be HIGH/1, pressed should be LOW/0):
+K1 GPIO4 = 1
+...
+K8 GPIO18 = 1
+u8g2.begin() using SW I2C...
+u8g2.begin done
+```
+
+### 常见硬件问题判断
+
+| 现象 | 优先判断 |
+|------|----------|
+| OLED 完全没反应，I2C 扫不到设备 | OLED VCC/GND/SCL/SDA 接错，或排针顺序看反。 |
+| 能扫到 `0x3C`，但屏幕不亮 | 可能是驱动初始化问题或 OLED 控制芯片不匹配。 |
+| 卡在 `u8g2.begin()` | 优先使用软件 I2C 构造器。 |
+| 按键板灯亮，但按键无日志 | 只接通了供电，K1-K8 信号线未正确接入 GPIO。 |
+| K1-K8 初始不是全 `1` | 某一路信号被拉低、短路或接错。 |
+| 按键按下后灯亮但 OLED 无返回内容 | 先区分硬件和网络：有 `Button Kx pressed` 说明按键硬件正常，后续看 WiFi/API 日志。 |
+
+### MAX98357A 音频模块
+
+MAX98357A 当前为预留硬件，主流程暂未启用。预留接线：
+
+| MAX98357A | ESP32-S3 |
+|-----------|----------|
+| VIN | 3.3V |
+| GND | GND |
+| DIN | GPIO42 / R6 |
+| BCLK | GPIO40 / R8 |
+| LRC | GPIO41 / R7 |
+| SD | GPIO39 / R9 |

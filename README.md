@@ -6,6 +6,16 @@
 **后端**: Python FastAPI · OpenAI 兼容协议 · Docker 可部署  
 **前端**: 单文件 HTML 接线演示页，可点击接线图里的 K1-K8 模拟真实按键
 
+## 前端预览
+
+![前端接线演示页](assets/screenshots/frontend-wiring-demo.png)
+
+## 实物演示
+
+<video src="assets/videos/VID_20260502_195355_0_COMPRESSED.mp4" controls width="720"></video>
+
+如果当前 Markdown 查看器不支持内嵌视频，可以直接打开：`assets/videos/VID_20260502_195355_0_COMPRESSED.mp4`。
+
 ---
 
 ## 当前结论
@@ -551,11 +561,9 @@ static const char* BUTTON_TITLES[8] = {
 | 现象 | 优先检查 |
 |------|----------|
 | 按键后短时间不能再按 | 正常。固件和演示页在 HTTP 请求期间会锁定按键，避免重复并发请求；等返回、失败或超时后恢复。想缩短等待，优先优化后端响应或调小 `HTTP_TIMEOUT_MS`。 |
-| `I2C scan found no devices` | OLED VCC/GND/SCL/SDA 是否按丝印接，SCL 是否到 GPIO14，SDA 是否到 GPIO13。 |
-| 能扫到 `0x3C`，但屏幕不亮 | 当前使用 U8g2 软件 I2C；若仍不亮，确认 OLED 控制芯片是否真是 SSD1306，必要时换 SH1106/SSD1315 构造器测试。 |
-| K1-K8 初始不是全 `1` | 对应按键线被拉低或接错，检查 K 线、VCC、GND 和模块排针顺序。 |
-| 按下没有 `raw changed` | 按键信号没有进 ESP32 GPIO，只是模块供电灯亮；重新核对 K1-K8 到 GPIO4/5/6/7/15/16/17/18。 |
-| 有 `Button Kx pressed`，但 OLED 没有返回文案 | 按键正常，问题通常在 WiFi、`SERVER_URL`、后端服务或防火墙；看串口里的 `Connected:`、`HTTP error:`、`Response:`。 |
+| OLED 不亮、I2C 扫不到、卡在 `u8g2.begin()` | 看 `HARDWARE.md` 的“本项目实测接线与调试注意点”，重点核对 OLED 排针顺序、GPIO14/13、`0x3C` 和软件 I2C。 |
+| 按键板灯亮但无按键日志 | 看 `HARDWARE.md` 的八位按键模块章节，重点核对 K1-K8 到 GPIO4/5/6/7/15/16/17/18，以及 active-LOW 电平日志。 |
+| 有 `Button Kx pressed`，但 OLED 没有返回文案 | 按键硬件正常，问题通常在 WiFi、`SERVER_URL`、后端服务或防火墙；看串口里的 `Connected:`、`HTTP error:`、`Response:`。 |
 | 前端演示页断开 | 先启动后端，再确认页面顶部 Server 是 `http://localhost:10003` 或 `http://电脑IP:10003`。 |
 
 ---
@@ -585,6 +593,11 @@ curl http://localhost:10003/health
 ├── src/main.cpp           ESP32 固件
 ├── include/
 │   └── secrets.example.h  ESP32 本地私有配置模板
+├── assets/
+│   ├── screenshots/       前端截图、效果截图
+│   ├── photos/            实物照片、购买截图
+│   └── videos/            实物演示视频
+├── HARDWARE.md            硬件清单、实测接线和排障记录
 ├── platformio.ini         PlatformIO 配置
 ├── frontend/
 │   └── index.html         接线图 + 演示面板
@@ -594,8 +607,7 @@ curl http://localhost:10003/health
 │   ├── requirements.txt
 │   ├── Dockerfile
 │   └── docker-compose.yml
-├── README.md
-└── HARDWARE.md            硬件规格参考
+└── README.md
 ```
 
 ---
@@ -606,3 +618,15 @@ curl http://localhost:10003/health
 2. 固件增加双击检测。
 3. 服务端新增 TTS 接口。
 4. ESP32 收到双击事件后显示文案并播放语音。
+
+---
+
+## 开发协作
+
+本项目部分代码、调试流程和文档由 OpenAI Codex 辅助整理，包括：
+
+- ESP32-S3 固件状态机、OLED 显示和按键调试逻辑梳理。
+- FastAPI 后端、前端接线演示页和 K1-K8 趣味输出配置整理。
+- VS Code + PlatformIO 复刻步骤、硬件排障记录和 README/HARDWARE 文档维护。
+
+硬件接线、实物调试和最终验证以本项目实际测试结果为准。
